@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class PropertyFilter(django_filters.FilterSet):
-
+    #Django has different lookup_expressions which determine how it is filtered
     advert_type = django_filters.CharFilter(
         field_name="advert_type", lookup_expr="iexact"
     )
@@ -77,14 +77,18 @@ class PropertyViewsAPIView(generics.ListAPIView):
 
 class PropertyDetailView(APIView):
     def get(self, request, slug):
+        #a slug the unique identifying part of a web address, typically at the end of the URL
         property = Property.objects.get(slug=slug)
-
+        # whenever a user visits via a proxy server the HTTP_VIA is IP address of proxy server and HTTP_X_FORWARDED_FOR is the IP address of the actual user who use the proxy server
+        #A proxy server is a system or router that provides a gateway between users and the internet.
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
             ip = x_forwarded_for.split(",")[0]
+        #"REMOTE_ADDR is the IP address of the machine actually making the request to the website"
         else:
             ip = request.META.get("REMOTE_ADDR")
 
+        # Property Views comes from the class in the model 
         if not PropertyViews.objects.filter(property=property, ip=ip).exists():
             PropertyViews.objects.create(property=property, ip=ip)
 
@@ -95,7 +99,9 @@ class PropertyDetailView(APIView):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+# function base view for updating a property
+#api_view and Permission_classes are decoraters
+#decorators add some functionality to the orginal function 
 @api_view(["PUT"])
 @permission_classes([permissions.IsAuthenticated])
 def update_property_api_view(request, slug):
@@ -112,12 +118,14 @@ def update_property_api_view(request, slug):
         )
     if request.method == "PUT":
         data = request.data
+        # many=False means 1 to 1 relationship
         serializer = PropertySerializer(property, data, many=False)
+        # if serializer is valid then move on if not then raise an exception
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
-
+# function base view for creating a property
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def create_property_api_view(request):
@@ -135,7 +143,7 @@ def create_property_api_view(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# function to delete a property
 @api_view(["DELETE"])
 @permission_classes([permissions.IsAuthenticated])
 def delete_property_api_view(request, slug):
@@ -175,7 +183,7 @@ def uploadPropertyImage(request):
     property.save()
     return Response("Image(s) uploaded")
 
-
+# class for searching 
 class PropertySearchAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = PropertyCreateSerializer
